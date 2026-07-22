@@ -1,0 +1,88 @@
+// Cue — portable SQLite schema (maps cleanly to Postgres later)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Household {
+  id        String     @id @default(cuid())
+  name      String
+  createdAt DateTime   @default(now())
+  users     User[]
+  platforms Platform[]
+}
+
+model User {
+  id          String      @id @default(cuid())
+  householdId String
+  household   Household   @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  email       String?     @unique
+  displayName String
+  createdAt   DateTime    @default(now())
+  follows     Follow[]
+  preference  Preference?
+}
+
+model Platform {
+  id          String    @id @default(cuid())
+  householdId String
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name        String
+  type        String
+  region      String    @default("GB")
+}
+
+model Show {
+  id        String    @id @default(cuid())
+  tvmazeId  Int       @unique
+  tmdbId    Int?
+  title     String
+  network   String?
+  type      String?
+  status    String?
+  genres    Json
+  posterUrl String?
+  follows   Follow[]
+  episodes  Episode[]
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  showId      String
+  show        Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+  addedAt     DateTime @default(now())
+  priority    Int      @default(3)
+  catchupFrom String?
+
+  @@unique([userId, showId])
+}
+
+model Episode {
+  id      String    @id @default(cuid())
+  showId  String
+  show    Show      @relation(fields: [showId], references: [id], onDelete: Cascade)
+  season  Int
+  number  Int
+  title   String?
+  airDate DateTime?
+  runtime Int?
+
+  @@unique([showId, season, number])
+}
+
+model Preference {
+  id             String  @id @default(cuid())
+  userId         String  @unique
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  genresWeighted Json
+  maxEpPerDay    Int     @default(3)
+  preferredSlots Json
+  bingeWeekend   Boolean @default(true)
+}
